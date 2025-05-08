@@ -4,6 +4,12 @@ A plugin to watch selected packages inside `node_modules` folders in your repo f
 
 ## Getting Started
 
+Install the plugin:
+
+```
+bun i -d vite-plugin-watch-node-modules
+```
+
 Add the node modules you would like to watch to `optimizeDeps.exclude` in your `vite.config.ts` file:
 
 ```ts
@@ -27,6 +33,10 @@ export default defineConfig({
       cwd: path.join(process.cwd(), "../../../"),
     }),
   ],
+  // ...
+  optimizeDeps: {
+    exclude: ["@my-module/great"],
+  },
   // ...
 });
 
