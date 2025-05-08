@@ -3,6 +3,12 @@ import chokidar from "chokidar";
 import { glob } from "tinyglobby";
 import { createServerHotChannel, type Plugin, type ViteDevServer } from "vite";
 
+const PLUGIN_NAME = "vite-plugin-watch-node-modules";
+
+function log(message: string) {
+  console.log(`[${PLUGIN_NAME}] ${message}`);
+}
+
 async function waitMillis(ms: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -70,10 +76,10 @@ export const watchNodeModule = (
   options?: IWatchNodeModulesChangesOptions,
 ): Plugin => ({
   apply: "serve",
-  name: "vite-plugin-watch-node-module",
+  name: PLUGIN_NAME,
   configureServer: async (server: ViteDevServer) => {
     const workingDirectory = options?.cwd || process.cwd();
-    console.log(`[vite-plugin-watch-node-modules-changes] working directory: ${workingDirectory}`);
+    log(`Working directory: ${workingDirectory}`);
 
     function queueUpdate(fileName: string, server: ViteDevServer) {
       if (queuedUpdates[fileName]) {
@@ -81,11 +87,6 @@ export const watchNodeModule = (
       }
 
       const absoluteFilename = path.join(workingDirectory, fileName);
-      console.log(`Absolute filename: ${absoluteFilename}`);
-
-      const configRoot = server.config.root;
-      // console.log(server.environments.client.config.root);
-      console.log(`Vite config root: ${configRoot}`);
 
       const updateAction = async () => {
         await waitMillis(50);
@@ -93,7 +94,7 @@ export const watchNodeModule = (
         try {
           const extractedVite = extractViteModuleFileParts(fileName);
 
-          console.log(
+          /*console.log(
             `Queued file update:
 Original             [${extractedVite.originalFilePath}]
 Without node_modules [${extractedVite.filePathWithoutNodeModules}]
@@ -101,7 +102,7 @@ Normal               [${extractedVite.moduleName}]
 File In Module       [${extractedVite.fileNameOnly}]
 Vite Module          [${extractedVite.viteModulePart}]
 Vite Filename        [${extractedVite.viteFileName}]`,
-          );
+          );*/
 
           const allViteModules = [...server.moduleGraph.idToModuleMap.values()];
 
@@ -115,14 +116,10 @@ Vite Filename        [${extractedVite.viteFileName}]`,
                 path.normalize(viteModule.file ?? "") === absoluteFilename,
             );
 
-            console.info(`Matched module file changes:\n
+            log(`Matched module file changes:\n
 -  ${matchedModules.map((m) => m.file).join("\n-  ")}`);
 
             for (const viteModule of matchedModules) {
-              console.log(
-                `[vite-plugin-watch-node-modules-changes] Updating module file change: ${viteModule.file}`,
-              );
-
               server.moduleGraph.invalidateModule(viteModule);
 
               server.ws.send({
@@ -136,7 +133,7 @@ Vite Filename        [${extractedVite.viteFileName}]`,
                 true,
               );*/
 
-              server.hot.send({
+              /*server.hot.send({
                 type: "update",
                 updates: [
                   {
@@ -174,7 +171,7 @@ Vite Filename        [${extractedVite.viteFileName}]`,
               });
 
               const newUrl = `${viteModule.url}?t=${Date.now()}`;
-              await server.transformRequest(newUrl);
+              await server.transformRequest(newUrl);*/
               /*server.ws.send({
                 type: "full-reload",
               });

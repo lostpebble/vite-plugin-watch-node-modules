@@ -1,8 +1,10 @@
 {
   "name": "vite-plugin-watch-node-modules",
   "version": "0.0.1",
-  "description": "",
+  "description": "A plugin to watch for changes in matched packages inside any 'node_modules' folder and trigger a reload in Vite.",
   "main": "dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "package.json", "readme.md"],
   "scripts": {
     "build": "bunx rimraf ./dist && tsc",
     "type-check": "bunx tsc --noEmit",
@@ -13,11 +15,17 @@
     "tinyglobby": "0.2.13"
   },
   "devDependencies": {
+    "@types/node": "^22.15.17",
     "typescript": "5.8.3",
     "vite": "^6.3.5"
   },
   "peerDependencies": {
     "vite": "^6.3.5"
   },
-  "private": true
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lostpebble/vite-plugin-watch-node-modules.git"
+  },
+  "keywords": ["vite", "plugin", "vite-plugin", "node_modules", "watch", "reload"],
+  "private": false
 }
