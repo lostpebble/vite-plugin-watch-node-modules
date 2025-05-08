@@ -1,0 +1,23 @@
+{
+  "name": "vite-plugin-watch-node-modules",
+  "version": "0.0.1",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "bunx rimraf ./dist && tsc",
+    "type-check": "bunx tsc --noEmit",
+    "type-check-watch": "bunx tsc --noEmit --watch"
+  },
+  "dependencies": {
+    "chokidar": "^4.0.3",
+    "tinyglobby": "0.2.13"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3",
+    "vite": "^6.3.5"
+  },
+  "peerDependencies": {
+    "vite": "^6.3.5"
+  },
+  "private": true
+}
