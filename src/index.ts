@@ -71,7 +71,7 @@ const queuedUpdates: {
 // C:\d\meteor-wallet-connect\node_modules\@meteorwallet\wallet-connect\dist\esm\wallet_connect_client\WalletConnectClient.js
 // C:/d/meteor-wallet-connect/node_modules/@meteorwallet/wallet-connect/dist/esm/wallet_connect_client/WalletConnectClient.js
 
-export const watchNodeModule = (
+export const watchNodeModules = (
   matchModules: string[],
   options?: IWatchNodeModulesChangesOptions,
 ): Plugin => ({

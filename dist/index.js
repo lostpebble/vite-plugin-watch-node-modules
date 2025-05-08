@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.watchNodeModule = void 0;
+exports.watchNodeModules = void 0;
 const node_path_1 = __importDefault(require("node:path"));
 const chokidar_1 = __importDefault(require("chokidar"));
 const tinyglobby_1 = require("tinyglobby");
@@ -52,7 +52,7 @@ function extractViteModuleFileParts(fullFilePath) {
     };
 }
 const queuedUpdates = {};
-const watchNodeModule = (matchModules, options) => ({
+const watchNodeModules = (matchModules, options) => ({
     apply: "serve",
     name: PLUGIN_NAME,
     configureServer: (server) => __awaiter(void 0, void 0, void 0, function* () {
@@ -137,4 +137,4 @@ const watchNodeModule = (matchModules, options) => ({
         });
     }),
 });
-exports.watchNodeModule = watchNodeModule;
+exports.watchNodeModules = watchNodeModules;
