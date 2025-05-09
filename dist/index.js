@@ -20,6 +20,15 @@ const PLUGIN_NAME = "vite-plugin-watch-node-modules";
 function log(message) {
     console.log(`[${PLUGIN_NAME}] ${message}`);
 }
+function info(message) {
+    console.info(`[${PLUGIN_NAME}] ${message}`);
+}
+function warn(message) {
+    console.warn(`[${PLUGIN_NAME}] ${message}`);
+}
+function error(message, e) {
+    console.error(`[${PLUGIN_NAME}] ${message}`, e);
+}
 function waitMillis(ms) {
     return __awaiter(this, void 0, void 0, function* () {
         return new Promise((resolve) => {
@@ -55,10 +64,15 @@ const queuedUpdates = {};
 const watchNodeModules = (matchModules, options) => ({
     apply: "serve",
     name: PLUGIN_NAME,
+    config: () => ({
+        optimizeDeps: {
+            exclude: matchModules,
+        },
+    }),
     configureServer: (server) => __awaiter(void 0, void 0, void 0, function* () {
         var _a;
         const workingDirectory = (options === null || options === void 0 ? void 0 : options.cwd) || process.cwd();
-        log(`Working directory: ${workingDirectory}`);
+        log(`Working directory: "${workingDirectory}"`);
         function queueUpdate(fileName, server) {
             if (queuedUpdates[fileName]) {
                 return;
@@ -76,21 +90,17 @@ const watchNodeModules = (matchModules, options) => ({
                                 ((_b = viteModule.file) === null || _b === void 0 ? void 0 : _b.includes(extractedVite.viteFileName))) ||
                                 node_path_1.default.normalize((_c = viteModule.file) !== null && _c !== void 0 ? _c : "") === absoluteFilename;
                         });
-                        log(`Matched module file changes:\n
--  ${matchedModules.map((m) => m.file).join("\n-  ")}`);
+                        log(`Triggering file changes:\n-  ${matchedModules.map((m) => m.file).join("\n-  ")}`);
                         for (const viteModule of matchedModules) {
-                            server.moduleGraph.invalidateModule(viteModule);
-                            server.ws.send({
-                                type: "full-reload",
-                            });
+                            yield server.reloadModule(viteModule);
                         }
                     }
                     else {
-                        console.warn("No Module info yet from Vite");
+                        warn("No Module info yet from Vite");
                     }
                 }
                 catch (e) {
-                    console.error(`[vite-plugin-watch-node-modules-changes] Error while processing file change: ${fileName}`, e);
+                    error(`Error while processing file change: ${fileName}`, e);
                 }
                 finally {
                     queuedUpdates[fileName] = undefined;
@@ -110,19 +120,17 @@ const watchNodeModules = (matchModules, options) => ({
             return node_path_1.default.normalize(moduleFile.slice(0, -13));
         });
         if (modulePaths.length === 0) {
-            console.warn(`[vite-plugin-watch-node-modules-changes] No node_modules found to watch for: "${matchModules.join(`", "`)}"`);
+            warn(`No node_modules found to watch for: "${matchModules.join(`", "`)}"`);
         }
         else {
-            console.info(`[vite-plugin-watch-node-modules-changes] Watching node_modules changes for:
-  - ${modulePaths.join("\n  -")}`);
+            info(`Watching node_modules changes for:\n  -${modulePaths.join("\n  -")}`);
         }
-        const modules = [...server.environments.client.moduleGraph.idToModuleMap.values()].map((m) => m.url);
         const handleFileUpdate = (changedPath) => {
             if (!changedPath.endsWith(".js")) {
                 return;
             }
             queueUpdate(changedPath, server);
-            console.log(`File changed: ${changedPath}`);
+            log(`File changed: ${changedPath}`);
         };
         const nodeModuleWatcher = chokidar_1.default.watch(modulePaths, {
             cwd: options === null || options === void 0 ? void 0 : options.cwd,

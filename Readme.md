@@ -1,6 +1,12 @@
 # vite-plugin-watch-node-modules
 
+On NPM: https://www.npmjs.com/package/vite-plugin-watch-node-modules
+
 A plugin to watch selected packages inside `node_modules` folders in your repo for changes, and trigger a reload in Vite.
+
+# Features
+
+* Hot-reload any file changes to packages inside any `node_modules` in your repo that match your provided `modules[]` array. 
 
 ## Getting Started
 
@@ -9,16 +15,6 @@ Install the plugin:
 ```
 bun i -d vite-plugin-watch-node-modules
 ```
-
-Add the node modules you would like to watch to `optimizeDeps.exclude` in your `vite.config.ts` file:
-
-```ts
-  optimizeDeps: {
-    exclude: ["@my-module/great"],
-  }
-```
-
-_This might be something I will add automatically to the plugin, but keeping it custom for now_
 
 Then add the plugin to your Vite config:
 
@@ -29,18 +25,15 @@ import { watchNodeModules } from "vite-plugin-watch-node-modules";
 export default defineConfig({
   plugins: [
     // ...
-    watchNodeModules(["@my-module/great"], {
+    watchNodeModules(["@my-module/great", "my-dev-module"], {
       cwd: path.join(process.cwd(), "../../../"),
     }),
   ],
-  // ...
-  optimizeDeps: {
-    exclude: ["@my-module/great"],
-  },
-  // ...
 });
-
 ```
+
+In this example, we are watching for changes to modules matching `@my-module/great` and `my-dev-module`- but our actual Vite project is
+3 folders deep in the monorepo, so we add the `cwd` option to get make sure we watch for modules form the root of the repo.
 
 ## Options
 
@@ -54,8 +47,3 @@ interface IWatchNodeModulesOptions {
 
 You can set a different `cwd` if you want to watch a different directory than the current working directory.
 This is useful if you are using a monorepo setup and want to watch packages in the root of the monorepo.
-
-## Notes
-
-* At the moment it does a full reload of the Vite server when a change is detected. This is not ideal, but it works for now.
-* The next step will be adding hot-reload functionality

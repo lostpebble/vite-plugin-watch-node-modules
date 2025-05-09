@@ -1,12 +1,14 @@
 {
   "name": "vite-plugin-watch-node-modules",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "A plugin to watch for changes in matched packages inside any 'node_modules' folder and trigger a reload in Vite.",
   "main": "dist/index.js",
   "types": "./dist/index.d.ts",
   "files": ["dist", "package.json", "readme.md"],
   "scripts": {
     "build": "bunx rimraf ./dist && tsc",
+    "build-watch": "bunx rimraf ./dist && tsc --watch",
+    "prepublish": "bun run build",
     "type-check": "bunx tsc --noEmit",
     "type-check-watch": "bunx tsc --noEmit --watch"
   },

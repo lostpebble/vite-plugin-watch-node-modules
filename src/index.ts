@@ -9,6 +9,18 @@ function log(message: string) {
   console.log(`[${PLUGIN_NAME}] ${message}`);
 }
 
+function info(message: string) {
+  console.info(`[${PLUGIN_NAME}] ${message}`);
+}
+
+function warn(message: string) {
+  console.warn(`[${PLUGIN_NAME}] ${message}`);
+}
+
+function error(message: string, e: unknown) {
+  console.error(`[${PLUGIN_NAME}] ${message}`, e);
+}
+
 async function waitMillis(ms: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -77,9 +89,14 @@ export const watchNodeModules = (
 ): Plugin => ({
   apply: "serve",
   name: PLUGIN_NAME,
+  config: () => ({
+    optimizeDeps: {
+      exclude: matchModules,
+    },
+  }),
   configureServer: async (server: ViteDevServer) => {
     const workingDirectory = options?.cwd || process.cwd();
-    log(`Working directory: ${workingDirectory}`);
+    log(`Working directory: "${workingDirectory}"`);
 
     function queueUpdate(fileName: string, server: ViteDevServer) {
       if (queuedUpdates[fileName]) {
@@ -106,9 +123,9 @@ Vite Filename        [${extractedVite.viteFileName}]`,
 
           const allViteModules = [...server.moduleGraph.idToModuleMap.values()];
 
-          if (allViteModules.length > 0) {
-            // console.log(`Vite modules: ${allViteModules.map((m) => m.file).join(", ")}`);
+          // log(`All Vite modules:\n-  ${allViteModules.map((m) => m.file).join("\n-  ")}`);
 
+          if (allViteModules.length > 0) {
             const matchedModules = allViteModules.filter(
               (viteModule) =>
                 (viteModule.file?.includes(extractedVite.viteModulePart) &&
@@ -116,78 +133,17 @@ Vite Filename        [${extractedVite.viteFileName}]`,
                 path.normalize(viteModule.file ?? "") === absoluteFilename,
             );
 
-            log(`Matched module file changes:\n
--  ${matchedModules.map((m) => m.file).join("\n-  ")}`);
+            log(`Triggering file changes:\n-  ${matchedModules.map((m) => m.file).join("\n-  ")}`);
 
             for (const viteModule of matchedModules) {
-              server.moduleGraph.invalidateModule(viteModule);
-
-              server.ws.send({
-                type: "full-reload",
-              });
-
-              /*server.environments.client.moduleGraph.invalidateModule(
-                viteModule,
-                new Set(matchedModules),
-                Date.now(),
-                true,
-              );*/
-
-              /*server.hot.send({
-                type: "update",
-                updates: [
-                  {
-                    type: "js-update",
-                    path: viteModule.url,
-                    acceptedPath: viteModule.url,
-                    timestamp: Date.now(),
-                  },
-                ],
-              });
-
-              const hotChannel = createServerHotChannel();
-              hotChannel.send?.({
-                type: "update",
-                updates: [
-                  {
-                    type: "js-update",
-                    path: viteModule.url,
-                    acceptedPath: viteModule.url,
-                    timestamp: Date.now(),
-                  },
-                ],
-              });
-
-              server.ws.send({
-                type: "update",
-                updates: [
-                  {
-                    type: "js-update",
-                    path: viteModule.url,
-                    acceptedPath: viteModule.url,
-                    timestamp: Date.now(),
-                  },
-                ],
-              });
-
-              const newUrl = `${viteModule.url}?t=${Date.now()}`;
-              await server.transformRequest(newUrl);*/
-              /*server.ws.send({
-                type: "full-reload",
-              });
-              server.environments.client.moduleGraph.invalidateModule(
-                viteModule,
-                new Set(matchedModules),
-                Date.now(),
-                true,
-              );*/
+              await server.reloadModule(viteModule);
             }
           } else {
-            console.warn("No Module info yet from Vite");
+            warn("No Module info yet from Vite");
           }
         } catch (e) {
-          console.error(
-            `[vite-plugin-watch-node-modules-changes] Error while processing file change: ${fileName}`,
+          error(
+            `Error while processing file change: ${fileName}`,
             e,
           );
         } finally {
@@ -199,31 +155,6 @@ Vite Filename        [${extractedVite.viteFileName}]`,
 
       updateAction();
     }
-
-    /*server.middlewares.use((req, res, next) => {
-      console.log(`VITE REQUEST URL: "${req.url}"`);
-      if (req.url === "/_cached_modules") {
-        const moduleGraph = server.moduleGraph;
-        const modules = Array.from(moduleGraph.idToModuleMap.values());
-        const cachedModules = JSON.stringify({
-          cachedModules: modules.map((m) => ({
-            id: m.id,
-            importedModules: Array.from(m.importedModules).map((im) => im.id),
-            importers: Array.from(m.importers).map((i) => i.id),
-            url: m.url,
-            type: m.type,
-            file: m.file,
-          })),
-        });
-
-        console.log("Cached modules", cachedModules);
-
-        res.setHeader("Content-Type", "application/json");
-        res.end(cachedModules);
-      } else {
-        next();
-      }
-    });*/
 
     const moduleFiles = await glob(
       matchModules.map((module) => `**/node_modules/${module}`),
@@ -243,17 +174,12 @@ Vite Filename        [${extractedVite.viteFileName}]`,
       });
 
     if (modulePaths.length === 0) {
-      console.warn(
-        `[vite-plugin-watch-node-modules-changes] No node_modules found to watch for: "${matchModules.join(`", "`)}"`,
+      warn(
+        `No node_modules found to watch for: "${matchModules.join(`", "`)}"`,
       );
     } else {
-      console.info(`[vite-plugin-watch-node-modules-changes] Watching node_modules changes for:
-  - ${modulePaths.join("\n  -")}`);
+      info(`Watching node_modules changes for:\n  -${modulePaths.join("\n  -")}`);
     }
-
-    const modules = [...server.environments.client.moduleGraph.idToModuleMap.values()].map(
-      (m) => m.url,
-    );
 
     const handleFileUpdate = (changedPath: string) => {
       if (!changedPath.endsWith(".js")) {
@@ -261,56 +187,7 @@ Vite Filename        [${extractedVite.viteFileName}]`,
       }
 
       queueUpdate(changedPath, server);
-      console.log(`File changed: ${changedPath}`);
-      /*const moduleUrls = [...server.environments.client.moduleGraph.idToModuleMap.values()].map(
-        (url) => {
-          return url.url;
-        },
-      );
-
-      console.log("Module URLS", moduleUrls);*/
-
-      /*const normalizedPath = path.normalize(changedPath);
-      const matchedModulePath = modulePaths.find((modulePath) =>
-        normalizedPath.includes(modulePath),
-      );
-
-      console.log(`Matched module path: ${matchedModulePath}`);
-
-      const modulePathAtCwd = path.join(options?.cwd || process.cwd(), matchedModulePath ?? "/");
-      const moduleFileAtCwd = path.join(options?.cwd || process.cwd(), normalizedPath ?? "/");
-
-      console.log(`Matched module path absolute: ${modulePathAtCwd}`);
-      console.log(`Matched module file absolute: ${moduleFileAtCwd}`);*/
-
-      // server.environments.client.moduleGraph.getModulesByFile();
-
-      // const modules = server.moduleGraph.getModuleById(normalizedPath);
-      // const module = server.environments.client.moduleGraph.getModuleById(normalizedPath);
-      // const moduleTest = server.environments.client.moduleGraph.getModuleById(
-      //   "@meteorwallet/wallet-connect",
-      // );
-
-      /*console.log(`[vite-plugin-watch-node-modules-changes] ${module}`);
-      console.log(`[vite-plugin-watch-node-modules-changes] ${moduleTest}`);
-
-      if (module) {
-        console.log(`Module found: ${module.id}`);
-        // server.moduleGraph.invalidateModule(module);
-
-        // 2. Send HMR update
-        server.ws.send({
-          type: "update",
-          updates: [
-            {
-              type: "js-update",
-              timestamp: Date.now(),
-              path: moduleFileAtCwd,
-              acceptedPath: moduleFileAtCwd,
-            },
-          ],
-        });
-      }*/
+      log(`File changed: ${changedPath}`);
     };
 
     const nodeModuleWatcher = chokidar.watch(modulePaths, {
