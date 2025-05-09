@@ -33,7 +33,7 @@ export default defineConfig({
 ```
 
 In this example, we are watching for changes to modules matching `@my-module/great` and `my-dev-module`- but our actual Vite project is
-3 folders deep in the monorepo, so we add the `cwd` option to get make sure we watch for modules form the root of the repo.
+3 folders deep in the monorepo, so we add the `cwd` option to get make sure we search for any matching modules from the root of the repo.
 
 ## Options
 
