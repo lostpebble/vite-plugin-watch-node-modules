@@ -1,7 +1,7 @@
 import path from "node:path";
 import chokidar from "chokidar";
 import { glob } from "tinyglobby";
-import { createServerHotChannel, type Plugin, type ViteDevServer } from "vite";
+import { type Plugin, type ViteDevServer } from "vite";
 
 const PLUGIN_NAME = "vite-plugin-watch-node-modules";
 
@@ -89,9 +89,9 @@ export const watchNodeModules = (
 ): Plugin => ({
   apply: "serve",
   name: PLUGIN_NAME,
-  config: () => ({
+  config: (c) => ({
     optimizeDeps: {
-      exclude: matchModules,
+      exclude: [...new Set(...(c.optimizeDeps?.exclude ?? []), ...matchModules)],
     },
   }),
   configureServer: async (server: ViteDevServer) => {
@@ -111,15 +111,15 @@ export const watchNodeModules = (
         try {
           const extractedVite = extractViteModuleFileParts(fileName);
 
-          /*console.log(
-            `Queued file update:
-Original             [${extractedVite.originalFilePath}]
-Without node_modules [${extractedVite.filePathWithoutNodeModules}]
-Normal               [${extractedVite.moduleName}]
-File In Module       [${extractedVite.fileNameOnly}]
-Vite Module          [${extractedVite.viteModulePart}]
-Vite Filename        [${extractedVite.viteFileName}]`,
-          );*/
+//           console.log(
+//             `Queued file update:
+// Original             [${extractedVite.originalFilePath}]
+// Without node_modules [${extractedVite.filePathWithoutNodeModules}]
+// Normal               [${extractedVite.moduleName}]
+// File In Module       [${extractedVite.fileNameOnly}]
+// Vite Module          [${extractedVite.viteModulePart}]
+// Vite Filename        [${extractedVite.viteFileName}]`,
+//           );
 
           const allViteModules = [...server.moduleGraph.idToModuleMap.values()];
 

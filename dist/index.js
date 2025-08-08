@@ -64,11 +64,14 @@ const queuedUpdates = {};
 const watchNodeModules = (matchModules, options) => ({
     apply: "serve",
     name: PLUGIN_NAME,
-    config: () => ({
-        optimizeDeps: {
-            exclude: matchModules,
-        },
-    }),
+    config: (c) => {
+        var _a, _b;
+        return ({
+            optimizeDeps: {
+                exclude: [...new Set(...((_b = (_a = c.optimizeDeps) === null || _a === void 0 ? void 0 : _a.exclude) !== null && _b !== void 0 ? _b : []), ...matchModules)],
+            },
+        });
+    },
     configureServer: (server) => __awaiter(void 0, void 0, void 0, function* () {
         var _a;
         const workingDirectory = (options === null || options === void 0 ? void 0 : options.cwd) || process.cwd();
