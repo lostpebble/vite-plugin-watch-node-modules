@@ -109,7 +109,6 @@ const watchNodeModules = (matchModules, options) => ({
                         }
                         for (const viteModule of matchedModules) {
                             yield server.reloadModule(viteModule);
-                            server.ws.send({ type: "full-reload" });
                         }
                     }
                     else {
