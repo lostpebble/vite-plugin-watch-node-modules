@@ -70,6 +70,13 @@ const watchNodeModules = (matchModules, options) => ({
             optimizeDeps: {
                 exclude: [...new Set(...((_b = (_a = c.optimizeDeps) === null || _a === void 0 ? void 0 : _a.exclude) !== null && _b !== void 0 ? _b : []), ...matchModules)],
             },
+            build: {
+                rollupOptions: {
+                    output: {
+                        inlineDynamicImports: true,
+                    },
+                },
+            },
         });
     },
     configureServer: (server) => __awaiter(void 0, void 0, void 0, function* () {
@@ -90,12 +97,19 @@ const watchNodeModules = (matchModules, options) => ({
                         const matchedModules = allViteModules.filter((viteModule) => {
                             var _a, _b, _c;
                             return (((_a = viteModule.file) === null || _a === void 0 ? void 0 : _a.includes(extractedVite.viteModulePart)) &&
-                                ((_b = viteModule.file) === null || _b === void 0 ? void 0 : _b.includes(extractedVite.viteFileName))) ||
+                                (((_b = viteModule.file) === null || _b === void 0 ? void 0 : _b.includes(extractedVite.viteFileName)) ||
+                                    extractedVite.viteFileName === "index.js")) ||
                                 node_path_1.default.normalize((_c = viteModule.file) !== null && _c !== void 0 ? _c : "") === absoluteFilename;
                         });
-                        log(`Triggering file changes:\n-  ${matchedModules.map((m) => m.file).join("\n-  ")}`);
+                        if (matchedModules.length === 0) {
+                            warn(`No matching Vite module found for: ${fileName}`);
+                        }
+                        else {
+                            log(`Triggering file changes:\n-  ${matchedModules.map((m) => m.file).join("\n-  ")}`);
+                        }
                         for (const viteModule of matchedModules) {
                             yield server.reloadModule(viteModule);
+                            server.ws.send({ type: "full-reload" });
                         }
                     }
                     else {

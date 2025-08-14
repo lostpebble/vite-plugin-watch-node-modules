@@ -93,6 +93,13 @@ export const watchNodeModules = (
     optimizeDeps: {
       exclude: [...new Set(...(c.optimizeDeps?.exclude ?? []), ...matchModules)],
     },
+    build: {
+      rollupOptions: {
+        output: {
+          inlineDynamicImports: true,
+        },
+      },
+    },
   }),
   configureServer: async (server: ViteDevServer) => {
     const workingDirectory = options?.cwd || process.cwd();
@@ -111,15 +118,17 @@ export const watchNodeModules = (
         try {
           const extractedVite = extractViteModuleFileParts(fileName);
 
-//           console.log(
-//             `Queued file update:
-// Original             [${extractedVite.originalFilePath}]
-// Without node_modules [${extractedVite.filePathWithoutNodeModules}]
-// Normal               [${extractedVite.moduleName}]
-// File In Module       [${extractedVite.fileNameOnly}]
-// Vite Module          [${extractedVite.viteModulePart}]
-// Vite Filename        [${extractedVite.viteFileName}]`,
-//           );
+          //           console.log(
+          //             `Queued file update:
+          // Original             [${extractedVite.originalFilePath}]
+          // Without node_modules [${extractedVite.filePathWithoutNodeModules}]
+          // Normal               [${extractedVite.moduleName}]
+          // File In Module       [${extractedVite.fileNameOnly}]
+          // Vite Module          [${extractedVite.viteModulePart}]
+          // Vite Filename        [${extractedVite.viteFileName}]`,
+          //           );
+
+          // const modulePartWithExtension = `${extractedVite.viteModulePart}.js`;
 
           const allViteModules = [...server.moduleGraph.idToModuleMap.values()];
 
@@ -129,11 +138,18 @@ export const watchNodeModules = (
             const matchedModules = allViteModules.filter(
               (viteModule) =>
                 (viteModule.file?.includes(extractedVite.viteModulePart) &&
-                  viteModule.file?.includes(extractedVite.viteFileName)) ||
+                  (viteModule.file?.includes(extractedVite.viteFileName) ||
+                    extractedVite.viteFileName === "index.js")) ||
                 path.normalize(viteModule.file ?? "") === absoluteFilename,
             );
 
-            log(`Triggering file changes:\n-  ${matchedModules.map((m) => m.file).join("\n-  ")}`);
+            if (matchedModules.length === 0) {
+              warn(`No matching Vite module found for: ${fileName}`);
+            } else {
+              log(
+                `Triggering file changes:\n-  ${matchedModules.map((m) => m.file).join("\n-  ")}`,
+              );
+            }
 
             for (const viteModule of matchedModules) {
               await server.reloadModule(viteModule);
@@ -142,10 +158,7 @@ export const watchNodeModules = (
             warn("No Module info yet from Vite");
           }
         } catch (e) {
-          error(
-            `Error while processing file change: ${fileName}`,
-            e,
-          );
+          error(`Error while processing file change: ${fileName}`, e);
         } finally {
           queuedUpdates[fileName] = undefined;
         }
@@ -174,9 +187,7 @@ export const watchNodeModules = (
       });
 
     if (modulePaths.length === 0) {
-      warn(
-        `No node_modules found to watch for: "${matchModules.join(`", "`)}"`,
-      );
+      warn(`No node_modules found to watch for: "${matchModules.join(`", "`)}"`);
     } else {
       info(`Watching node_modules changes for:\n  -${modulePaths.join("\n  -")}`);
     }
