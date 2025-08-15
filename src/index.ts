@@ -1,7 +1,8 @@
+import * as fs from "node:fs";
 import path from "node:path";
 import chokidar from "chokidar";
 import { glob } from "tinyglobby";
-import { type Plugin, type ViteDevServer } from "vite";
+import { ModuleNode, type Plugin, type ViteDevServer } from "vite";
 
 const PLUGIN_NAME = "vite-plugin-watch-node-modules";
 
@@ -105,12 +106,39 @@ export const watchNodeModules = (
     const workingDirectory = options?.cwd || process.cwd();
     log(`Working directory: "${workingDirectory}"`);
 
+    /*const onHMRUpdate = async (type: "create" | "delete" | "update", file: string) => {
+      if (server.hot.api !== false) {
+        await handleHMRUpdate(type, file, server);
+      }
+    };*/
+
     function queueUpdate(fileName: string, server: ViteDevServer) {
       if (queuedUpdates[fileName]) {
         return;
       }
 
-      const absoluteFilename = path.join(workingDirectory, fileName);
+      log(`Queueing file update: ${fileName}`);
+
+      const absoluteFilename = path.normalize(path.join(workingDirectory, fileName));
+      const parsedPath = path.parse(absoluteFilename);
+      const actualDirectoryInSymlink = fs.realpathSync(parsedPath.dir);
+      const symlinkedFilename = path.join(
+        actualDirectoryInSymlink,
+        parsedPath.name + parsedPath.ext,
+      );
+
+      const absoluteFilenameForwardSlash = absoluteFilename.replace(/\\/g, "/");
+      const symlinkedFilenameForwardSlash = symlinkedFilename.replace(/\\/g, "/");
+
+      // console.log("File name [original]", absoluteFilename, absoluteFilenameForwardSlash);
+      // console.log("File name [symlinked]", symlinkedFilename, symlinkedFilenameForwardSlash);
+
+      const allPaths = [
+        absoluteFilename,
+        absoluteFilenameForwardSlash,
+        symlinkedFilename,
+        symlinkedFilenameForwardSlash,
+      ];
 
       const updateAction = async () => {
         await waitMillis(50);
@@ -118,32 +146,68 @@ export const watchNodeModules = (
         try {
           const extractedVite = extractViteModuleFileParts(fileName);
 
-          //           console.log(
-          //             `Queued file update:
+          // console.log(
+          //   `Queued file update:
           // Original             [${extractedVite.originalFilePath}]
           // Without node_modules [${extractedVite.filePathWithoutNodeModules}]
           // Normal               [${extractedVite.moduleName}]
           // File In Module       [${extractedVite.fileNameOnly}]
           // Vite Module          [${extractedVite.viteModulePart}]
           // Vite Filename        [${extractedVite.viteFileName}]`,
-          //           );
+          // );
 
           // const modulePartWithExtension = `${extractedVite.viteModulePart}.js`;
 
-          const allViteModules = [...server.moduleGraph.idToModuleMap.values()];
+          const allViteIdModules = [...server.moduleGraph.idToModuleMap.values()];
+          // const allViteFileSystemRequests = [...server.moduleGraph.urlToModuleMap.values()];
+
+          // console.log("Found ID modules", allViteIdModules);
+          // console.log("Found file system modules", allViteFileSystemRequests);
 
           // log(`All Vite modules:\n-  ${allViteModules.map((m) => m.file).join("\n-  ")}`);
 
-          if (allViteModules.length > 0) {
-            const matchedModules = allViteModules.filter(
-              (viteModule) =>
+          let matchedModuleMap: Map<string, ModuleNode> = new Map();
+
+          if (allViteIdModules.length > 0) {
+            for (const viteModule of allViteIdModules) {
+              // console.log("Vite module importers", [...viteModule.importers]);
+              // console.log("Vite module file", viteModule.file);
+              // console.log(
+              //   "Vite module imported modules",
+              //   [...viteModule.importedModules.values()].map((v) => v.id),
+              // );
+              // console.log("Vite module accepted hmr deps", [...viteModule.acceptedHmrDeps]);
+              // console.log("Vite module static imported urls", [
+              //   ...((viteModule as any).staticImportedUrls ?? []),
+              // ]);
+
+              const modulePaths = [
+                viteModule.file,
+                viteModule._clientModule?.file,
+                viteModule._ssrModule?.file,
+              ];
+
+              if (
+                allPaths.some((p) => modulePaths.includes(p)) ||
                 (viteModule.file?.includes(extractedVite.viteModulePart) &&
                   (viteModule.file?.includes(extractedVite.viteFileName) ||
                     extractedVite.viteFileName === "index.js")) ||
-                path.normalize(viteModule.file ?? "") === absoluteFilename,
-            );
+                path.normalize(viteModule.file ?? "") === absoluteFilename
+              ) {
+                matchedModuleMap.set(viteModule.id ?? "no-id", viteModule);
+              }
+            }
+            // const matchedModules = allViteIdModules.filter(
+            //   (viteModule) =>
+            //     (viteModule.file?.includes(extractedVite.viteModulePart) &&
+            //       (viteModule.file?.includes(extractedVite.viteFileName) ||
+            //         extractedVite.viteFileName === "index.js")) ||
+            //     path.normalize(viteModule.file ?? "") === absoluteFilename,
+            // );
 
-            if (matchedModules.length === 0) {
+            const matchedModules = [...matchedModuleMap.values()];
+
+            if ([...matchedModules.values()].length === 0) {
               warn(`No matching Vite module found for: ${fileName}`);
             } else {
               log(
@@ -152,6 +216,15 @@ export const watchNodeModules = (
             }
 
             for (const viteModule of matchedModules) {
+              const filePath = viteModule.file;
+
+              // if (filePath != null) {
+              // delete the file
+              // for (const environment of Object.values(server.environments)) {
+              //   environment.moduleGraph.onFileDelete(filePath);
+              // }
+              // }
+
               await server.reloadModule(viteModule);
             }
           } else {
